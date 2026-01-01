@@ -142,8 +142,12 @@ def generate_words_by_ai(words_list, api_key, base_url):
     system_prompt = """
     You are an English teacher. Output ONLY valid JSON.
     JSON format: [{"Word": "...", "Phonetic": "...", "Meaning": "...", "Example": "...", "Collocation": "..."}]
+    Rules:
     1. "Meaning": MUST be in CHINESE only (n./v. + 中文意思)
-    2. "Example": English sentence + Chinese translation (no extra space)
+    2. "Collocation": MUST be in ENGLISH only. No Chinese translation or explanation.
+    3. "Example": English sentence + Chinese translation.
+    4. "Phonetic": Use standard IPA phonetic symbols.
+    5. The card's English components (Word, Phonetic, Collocation, and English part of Example) must NOT contain any Chinese characters.
     """
     try:
         response = client.chat.completions.create(
@@ -228,6 +232,7 @@ def _generate_pages(words_data, student_info, for_printing):
             example = str(row.get('Example',''))
             masked = get_masked_sentence(example, word)
             english_sentence = extract_english_only(example)
+            english_collocation = extract_english_only(str(row.get('Collocation','')))
             html += f'''
             <div class="card">
                 <div class="left">
@@ -242,7 +247,7 @@ def _generate_pages(words_data, student_info, for_printing):
                     <h3 style="margin:0 0 4px;font-size:19px;">{word}</h3>
                     <div style="color:#666;font-family:'Times New Roman';font-size:13px;margin-bottom:5px">{row.get('Phonetic','')}</div>
                     <div style="font-size:10px;color:#999;font-weight:bold">COLLOCATION</div>
-                    <div style="font-size:12px;line-height:1.3;margin-bottom:5px">{row.get('Collocation','')}</div>
+                    <div style="font-size:12px;line-height:1.3;margin-bottom:5px">{english_collocation}</div>
                     <div style="font-size:10px;color:#999;font-weight:bold">SENTENCE</div>
                     <div class="sentence">{english_sentence}</div>
                 </div>
@@ -343,7 +348,7 @@ history_df = load_history()
 col1, col2 = st.columns([1, 1.5])
 
 # 在load_or_create_data函数之后添加新的函数
-def find_similar_words(input_word, word_list, cutoff=0.8):
+def find_similar_words(input_word, word_list, cutoff=0.94):
     """
     查找相似的单词，用于拼写检查
     :param input_word: 用户输入的单词
